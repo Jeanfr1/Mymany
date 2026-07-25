@@ -1,6 +1,11 @@
 import Link from "next/link";
 import { requireAdmin } from "@/lib/auth";
 
+// The dashboard is auth-gated and reads request state (cookies) + env at request
+// time. Force dynamic rendering for the entire /dashboard subtree so nothing here
+// is prerendered at build (which would run before env vars exist).
+export const dynamic = "force-dynamic";
+
 const NAV = [
   { href: "/dashboard", label: "Overview" },
   { href: "/dashboard/connection", label: "Connection" },

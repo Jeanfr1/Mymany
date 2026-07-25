@@ -26,8 +26,10 @@ export function createServiceClient() {
  * session. Uses the public anon/publishable key; RLS denies it all table access.
  */
 export async function createServerAuthClient() {
-  const env = getServerEnv();
+  // Touch cookies() first so that, during any build-time prerender attempt, Next's
+  // dynamic bailout fires before env validation runs (avoids a hard env error).
   const cookieStore = await cookies();
+  const env = getServerEnv();
   return createServerClient(
     env.NEXT_PUBLIC_SUPABASE_URL,
     env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
