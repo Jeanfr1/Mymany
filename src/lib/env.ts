@@ -27,7 +27,13 @@ const serverSchema = z.object({
 
   // Instagram / Meta
   INSTAGRAM_APP_ID: z.string().min(1),
+  // Instagram App Secret (Instagram product → API setup) — used for OAuth.
   INSTAGRAM_APP_SECRET: z.string().min(1),
+  // Optional Meta App Secret (Settings → Basic). In the Instagram-Login setup the
+  // webhook may be signed with this instead of the Instagram App Secret, so we
+  // accept either when validating X-Hub-Signature-256. Safe to leave unset if the
+  // two are identical.
+  META_APP_SECRET: z.string().optional(),
   INSTAGRAM_VERIFY_TOKEN: z
     .string()
     .min(16)

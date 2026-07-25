@@ -2,7 +2,7 @@ import { NextResponse, after, type NextRequest } from "next/server";
 import { getServerEnv } from "@/lib/env";
 import {
   verifyHandshake,
-  verifyWebhookSignature,
+  verifyWebhookSignatureAny,
 } from "@/lib/webhook/signature";
 import { parseWebhookPayload } from "@/lib/webhook/parse";
 import { processNormalizedEvents } from "@/lib/engine/process";
@@ -39,12 +39,20 @@ export async function POST(request: NextRequest) {
   // 1) Read the RAW body BEFORE any parsing (required for HMAC).
   const rawBody = await request.text();
 
-  // 2) Validate the signature (constant-time). Reject if missing/invalid.
+  // 2) Validate the signature (constant-time) against either the Instagram App
+  //    Secret or the Meta App Secret. Reject if missing/invalid.
   const signature = request.headers.get("x-hub-signature-256");
-  if (!verifyWebhookSignature(rawBody, signature, env.INSTAGRAM_APP_SECRET)) {
+  const matched = verifyWebhookSignatureAny(rawBody, signature, [
+    env.INSTAGRAM_APP_SECRET,
+    env.META_APP_SECRET ?? "",
+  ]);
+  if (matched < 0) {
     log.warn("webhook rejected: invalid signature");
     return new NextResponse("Invalid signature", { status: 401 });
   }
+  log.debug("webhook signature ok", {
+    matched_secret: matched === 0 ? "instagram_app_secret" : "meta_app_secret",
+  });
 
   // 3) Parse JSON only after signature validation.
   let payload: unknown;

@@ -1,6 +1,10 @@
 import { describe, it, expect } from "vitest";
 import { createHmac } from "node:crypto";
-import { verifyWebhookSignature, verifyHandshake } from "./signature";
+import {
+  verifyWebhookSignature,
+  verifyWebhookSignatureAny,
+  verifyHandshake,
+} from "./signature";
 
 const SECRET = "test-app-secret";
 function sign(body: string): string {
@@ -31,6 +35,38 @@ describe("verifyWebhookSignature", () => {
     expect(verifyWebhookSignature(body, "", SECRET)).toBe(false);
     expect(verifyWebhookSignature(body, "md5=abc", SECRET)).toBe(false);
     expect(verifyWebhookSignature(body, "sha256=deadbeef", SECRET)).toBe(false);
+  });
+});
+
+describe("verifyWebhookSignatureAny", () => {
+  const body = JSON.stringify({ object: "instagram", entry: [] });
+  const igSecret = "instagram-secret";
+  const metaSecret = "meta-secret";
+  const signWith = (s: string) =>
+    "sha256=" + createHmac("sha256", s).update(body).digest("hex");
+
+  it("matches the first (Instagram) secret → index 0", () => {
+    expect(
+      verifyWebhookSignatureAny(body, signWith(igSecret), [igSecret, metaSecret]),
+    ).toBe(0);
+  });
+
+  it("matches the second (Meta) secret → index 1", () => {
+    expect(
+      verifyWebhookSignatureAny(body, signWith(metaSecret), [igSecret, metaSecret]),
+    ).toBe(1);
+  });
+
+  it("returns -1 when no secret matches", () => {
+    expect(
+      verifyWebhookSignatureAny(body, signWith("other"), [igSecret, metaSecret]),
+    ).toBe(-1);
+  });
+
+  it("ignores empty secrets in the list", () => {
+    expect(
+      verifyWebhookSignatureAny(body, signWith(igSecret), ["", igSecret]),
+    ).toBe(1);
   });
 });
 

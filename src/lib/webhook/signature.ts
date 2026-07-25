@@ -29,6 +29,26 @@ export function verifyWebhookSignature(
 }
 
 /**
+ * Validate the signature against ANY of the candidate secrets (constant-time each).
+ * In the Instagram-Login setup, the webhook may be signed with the Instagram App
+ * Secret OR the Meta App Secret — we accept either. Returns the index of the
+ * matching secret (for masked diagnostics), or -1 if none match.
+ */
+export function verifyWebhookSignatureAny(
+  rawBody: string,
+  signatureHeader: string | null | undefined,
+  secrets: string[],
+): number {
+  if (!signatureHeader || !signatureHeader.startsWith("sha256=")) return -1;
+  for (let i = 0; i < secrets.length; i++) {
+    const secret = secrets[i];
+    if (!secret) continue;
+    if (verifyWebhookSignature(rawBody, signatureHeader, secret)) return i;
+  }
+  return -1;
+}
+
+/**
  * Validate the GET handshake. Returns the challenge to echo, or null to reject.
  * (brief §8.1)
  */
