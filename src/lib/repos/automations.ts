@@ -1,6 +1,10 @@
 import "server-only";
 import { createServiceClient } from "@/lib/supabase/server";
-import type { Tables } from "@/types/database.types";
+import type {
+  Tables,
+  TablesInsert,
+  TablesUpdate,
+} from "@/types/database.types";
 
 export type Automation = Tables<"automations">;
 
@@ -48,4 +52,60 @@ export async function listAutomationsForAccount(
     .order("created_at", { ascending: false });
   if (error) throw error;
   return data ?? [];
+}
+
+export async function listAllAutomations(): Promise<Automation[]> {
+  const db = createServiceClient();
+  const { data, error } = await db
+    .from("automations")
+    .select("*")
+    .order("created_at", { ascending: false });
+  if (error) throw error;
+  return data ?? [];
+}
+
+export async function createAutomation(
+  input: TablesInsert<"automations">,
+): Promise<Automation> {
+  const db = createServiceClient();
+  const { data, error } = await db
+    .from("automations")
+    .insert(input)
+    .select("*")
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+export async function updateAutomation(
+  id: string,
+  patch: TablesUpdate<"automations">,
+): Promise<Automation> {
+  const db = createServiceClient();
+  const { data, error } = await db
+    .from("automations")
+    .update(patch)
+    .eq("id", id)
+    .select("*")
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+export async function setAutomationActive(
+  id: string,
+  active: boolean,
+): Promise<void> {
+  const db = createServiceClient();
+  const { error } = await db
+    .from("automations")
+    .update({ active })
+    .eq("id", id);
+  if (error) throw error;
+}
+
+export async function deleteAutomation(id: string): Promise<void> {
+  const db = createServiceClient();
+  const { error } = await db.from("automations").delete().eq("id", id);
+  if (error) throw error;
 }
