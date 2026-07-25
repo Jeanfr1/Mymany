@@ -42,7 +42,21 @@ const serverSchema = z.object({
     .string()
     .min(16)
     .describe("Shared secret guarding internal cron endpoints."),
+
+  // Admin allowlist — only these emails may access the dashboard (single-admin).
+  ADMIN_EMAILS: z
+    .string()
+    .min(3)
+    .describe("Comma-separated allowlist of admin emails permitted to sign in."),
 });
+
+/** Parsed, lowercased admin email allowlist. */
+export function getAdminEmails(): string[] {
+  return getServerEnv()
+    .ADMIN_EMAILS.split(",")
+    .map((e) => e.trim().toLowerCase())
+    .filter(Boolean);
+}
 
 export type ServerEnv = z.infer<typeof serverSchema>;
 
