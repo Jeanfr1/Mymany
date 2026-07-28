@@ -291,10 +291,13 @@ async function enqueueDeliverySequence(
   let enqueued = 0;
   const now = Date.now();
 
+  // Dedup by EVENT (not contact): each genuine new inbound interaction re-triggers
+  // the automation (re-engagement works), while replayed webhooks are already
+  // filtered upstream by the events-table dedup hash — so this can't double-send.
   if (opts.includeWelcome && a.welcome_message) {
     const w = await enqueue({
       jobType: "welcome_message",
-      deduplicationKey: `welcome:${a.id}:${contact.id}`,
+      deduplicationKey: `welcome:${a.id}:${eventId}`,
       instagramAccountId: account.id,
       automationId: a.id,
       contactId: contact.id,
@@ -310,7 +313,7 @@ async function enqueueDeliverySequence(
   if (a.link_url && a.link_message) {
     const link = await enqueue({
       jobType: "link_message",
-      deduplicationKey: `link:${a.id}:${contact.id}`,
+      deduplicationKey: `link:${a.id}:${eventId}`,
       instagramAccountId: account.id,
       automationId: a.id,
       contactId: contact.id,
@@ -324,7 +327,7 @@ async function enqueueDeliverySequence(
   if (a.reminder_enabled && a.reminder_text) {
     const rem = await enqueue({
       jobType: "reminder",
-      deduplicationKey: `reminder:${a.id}:${contact.id}`,
+      deduplicationKey: `reminder:${a.id}:${eventId}`,
       instagramAccountId: account.id,
       automationId: a.id,
       contactId: contact.id,
