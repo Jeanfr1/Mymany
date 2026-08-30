@@ -198,6 +198,47 @@ export async function sendMessage(params: {
   return parse<SendResult>(res);
 }
 
+export type UrlButton = { title: string; url: string };
+
+/**
+ * Send a DM containing a button template: real tappable web_url buttons
+ * (Instagram Send API). Up to 3 buttons; titles are capped at 20 chars and
+ * text at 640 by the platform, so we defensively slice. Requires an open
+ * messaging window (recipient by id).
+ */
+export async function sendButtons(params: {
+  accessToken: string;
+  igUserId: string;
+  recipientId: string;
+  text: string;
+  buttons: UrlButton[];
+}): Promise<SendResult> {
+  const url = new URL(`${IG_GRAPH_BASE}/${params.igUserId}/messages`);
+  url.searchParams.set("access_token", params.accessToken);
+  const res = await fetch(url, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({
+      recipient: { id: params.recipientId },
+      message: {
+        attachment: {
+          type: "template",
+          payload: {
+            template_type: "button",
+            text: params.text.slice(0, 640),
+            buttons: params.buttons.slice(0, 3).map((b) => ({
+              type: "web_url",
+              url: b.url,
+              title: b.title.slice(0, 20),
+            })),
+          },
+        },
+      },
+    }),
+  });
+  return parse<SendResult>(res);
+}
+
 /**
  * Private reply to a comment (does NOT open a messaging window; one per comment).
  * recipient is the comment_id (DECISIONS §5/§6).

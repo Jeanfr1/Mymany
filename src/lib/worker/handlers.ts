@@ -11,9 +11,12 @@ import {
 import { createTrackingLink, hasClicked } from "@/lib/repos/tracking";
 import {
   sendMessage,
+  sendButtons,
   sendPrivateReply,
   publicReplyToComment,
+  type UrlButton,
 } from "@/lib/instagram/client";
+import { getLinkFollowupButtons } from "@/lib/repos/followups";
 import type { QueueJob } from "@/lib/repos/queue";
 import { isSafeHttpsUrl, trimTrailingSlash } from "@/lib/url";
 
@@ -129,15 +132,37 @@ export async function executeJob(job: QueueJob): Promise<JobOutcome> {
         });
         url = `${trimTrailingSlash(getServerEnv().NEXT_PUBLIC_APP_URL)}/r/${code}`;
       }
-      const label = a.link_button_label ? `${a.link_button_label}: ` : "";
-      const body = a.link_message ? `${a.link_message}\n${label}${url}` : `${label}${url}`;
-      const res = await sendMessage({
-        accessToken: token,
-        igUserId: account.instagram_user_id,
-        recipientId,
-        text: body,
-      });
-      return { type: "sent", providerMessageId: res.message_id };
+
+      // Prefer native tappable buttons (button template): the primary link plus
+      // any active link followups. Fall back to a plain-text link if the
+      // platform rejects the template, so the message always delivers.
+      const buttons: UrlButton[] = [
+        { title: a.link_button_label || "Open", url },
+      ];
+      for (const b of await getLinkFollowupButtons(a.id)) buttons.push(b);
+      const text = a.link_message || "Here you go 👇";
+      try {
+        const res = await sendButtons({
+          accessToken: token,
+          igUserId: account.instagram_user_id,
+          recipientId,
+          text,
+          buttons,
+        });
+        return { type: "sent", providerMessageId: res.message_id };
+      } catch {
+        const label = a.link_button_label ? `${a.link_button_label}: ` : "";
+        const body = a.link_message
+          ? `${a.link_message}\n${label}${url}`
+          : `${label}${url}`;
+        const res = await sendMessage({
+          accessToken: token,
+          igUserId: account.instagram_user_id,
+          recipientId,
+          text: body,
+        });
+        return { type: "sent", providerMessageId: res.message_id };
+      }
     }
 
     case "reminder": {
