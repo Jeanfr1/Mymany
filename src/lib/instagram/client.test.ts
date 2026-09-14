@@ -6,7 +6,7 @@ describe("Instagram token exchange", () => {
     vi.unstubAllGlobals();
   });
 
-  it("exchanges a short-lived token via a form-encoded POST", async () => {
+  it("exchanges a short-lived token using the Instagram exchange endpoint", async () => {
     const fetchMock = vi.fn().mockResolvedValue(
       new Response(
         JSON.stringify({
@@ -31,17 +31,13 @@ describe("Instagram token exchange", () => {
     });
 
     expect(fetchMock).toHaveBeenCalledOnce();
-    const [url, init] = fetchMock.mock.calls[0] as [string, RequestInit];
-    expect(url).toBe("https://graph.instagram.com/access_token");
-    expect(url).not.toContain("app-secret");
-    expect(url).not.toContain("short-token");
-    expect(init.method).toBe("POST");
-    expect(init.headers).toEqual({
-      "content-type": "application/x-www-form-urlencoded",
-    });
-    expect(init.body).toBeInstanceOf(URLSearchParams);
-    expect(String(init.body)).toBe(
-      "grant_type=ig_exchange_token&client_secret=app-secret&access_token=short-token",
+    const [input, init] = fetchMock.mock.calls[0] as [URL, RequestInit];
+    expect(input.origin + input.pathname).toBe(
+      "https://graph.instagram.com/access_token",
     );
+    expect(input.searchParams.get("grant_type")).toBe("ig_exchange_token");
+    expect(input.searchParams.get("client_secret")).toBe("app-secret");
+    expect(input.searchParams.get("access_token")).toBe("short-token");
+    expect(init.method).toBe("GET");
   });
 });

@@ -10,6 +10,8 @@ const STATUS_MESSAGES: Record<string, string> = {
   missing_code: "Instagram did not return an authorization code.",
   invalid_state: "The connection link expired or was already used. Try again.",
   no_profile: "Could not read the account profile.",
+  account_not_authorized:
+    "Instagram rejected this account. Add it as an Instagram Tester and accept the invitation, or grant the app Advanced Access.",
   error: "Something went wrong during connection. Check diagnostics.",
 };
 

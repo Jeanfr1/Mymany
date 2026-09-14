@@ -123,6 +123,12 @@ export async function GET(request: NextRequest) {
       error: err instanceof Error ? err.message : String(err),
       ...(err instanceof IgApiError ? err.toLogFields() : {}),
     });
-    return redirectToConnection(appUrl, { status: "error" });
+    const accountNotAuthorized =
+      stage === "long_lived_token" &&
+      err instanceof IgApiError &&
+      err.code === 100;
+    return redirectToConnection(appUrl, {
+      status: accountNotAuthorized ? "account_not_authorized" : "error",
+    });
   }
 }

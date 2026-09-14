@@ -63,18 +63,11 @@ export async function exchangeForLongLivedToken(params: {
   appSecret: string;
   shortLivedToken: string;
 }): Promise<LongLivedToken> {
-  const body = new URLSearchParams({
-    grant_type: "ig_exchange_token",
-    client_secret: params.appSecret,
-    access_token: params.shortLivedToken,
-  });
-  return parse<LongLivedToken>(
-    await fetch(`${IG_GRAPH_HOST}/access_token`, {
-      method: "POST",
-      headers: { "content-type": "application/x-www-form-urlencoded" },
-      body,
-    }),
-  );
+  const url = new URL(`${IG_GRAPH_HOST}/access_token`);
+  url.searchParams.set("grant_type", "ig_exchange_token");
+  url.searchParams.set("client_secret", params.appSecret);
+  url.searchParams.set("access_token", params.shortLivedToken);
+  return parse<LongLivedToken>(await fetch(url, { method: "GET" }));
 }
 
 export async function refreshLongLivedToken(
