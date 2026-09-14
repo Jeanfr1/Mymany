@@ -58,6 +58,10 @@ export function buildAuthorizeUrl(params: {
   url.searchParams.set("response_type", "code");
   url.searchParams.set("scope", IG_SCOPE_STRING);
   url.searchParams.set("state", params.state);
+  // Instagram otherwise reuses the active browser session. That makes the
+  // "Connect" action bind the previously authorized account again instead of
+  // letting the admin authenticate a different professional account.
+  url.searchParams.set("force_reauth", "true");
   return url.toString();
 }
 

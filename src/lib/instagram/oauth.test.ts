@@ -21,6 +21,7 @@ describe("OAuth URL building", () => {
     );
     expect(url.searchParams.get("scope")).toBe(IG_SCOPE_STRING);
     expect(url.searchParams.get("state")).toBe("xyz");
+    expect(url.searchParams.get("force_reauth")).toBe("true");
   });
 
   it("derives the redirect URI without a trailing slash", () => {
