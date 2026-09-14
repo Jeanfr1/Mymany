@@ -43,7 +43,7 @@ Base host: **`https://graph.instagram.com`** (Instagram-Login flavor).
 |---|---|---|
 | OAuth authorize (user redirect) | GET | `https://www.instagram.com/oauth/authorize` |
 | Exchange code → short-lived token | POST | `https://api.instagram.com/oauth/access_token` |
-| Short-lived → long-lived token (60 days) | GET | `https://graph.instagram.com/access_token?grant_type=ig_exchange_token` |
+| Short-lived → long-lived token (60 days) | POST | `https://graph.instagram.com/access_token` (`application/x-www-form-urlencoded`) |
 | Refresh long-lived token | GET | `https://graph.instagram.com/refresh_access_token?grant_type=ig_refresh_token` |
 | Connected account profile | GET | `https://graph.instagram.com/v25.0/me?fields=user_id,username,name,profile_picture_url,account_type` |
 | List my media | GET | `https://graph.instagram.com/v25.0/me/media` |

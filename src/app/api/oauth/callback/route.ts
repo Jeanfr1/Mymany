@@ -10,6 +10,7 @@ import {
 } from "@/lib/instagram/client";
 import { upsertConnectedAccount } from "@/lib/repos/accounts";
 import { WEBHOOK_FIELDS, IG_SCOPES } from "@/lib/instagram/config";
+import { IgApiError } from "@/lib/instagram/errors";
 import { log } from "@/lib/log";
 
 export const runtime = "nodejs";
@@ -46,6 +47,7 @@ export async function GET(request: NextRequest) {
     return redirectToConnection(appUrl, { status: "invalid_state" });
   }
 
+  let stage = "short_lived_token";
   try {
     // 1) code -> short-lived token
     const short = await exchangeCodeForToken({
@@ -56,12 +58,14 @@ export async function GET(request: NextRequest) {
     });
 
     // 2) short-lived -> long-lived (~60 days)
+    stage = "long_lived_token";
     const long = await exchangeForLongLivedToken({
       appSecret: env.INSTAGRAM_APP_SECRET,
       shortLivedToken: short.access_token,
     });
 
     // 3) profile
+    stage = "profile";
     const profile = await getProfile(long.access_token);
     if (!profile.user_id) {
       return redirectToConnection(appUrl, { status: "no_profile" });
@@ -74,6 +78,7 @@ export async function GET(request: NextRequest) {
         : [...IG_SCOPES];
 
     // 4) store encrypted
+    stage = "account_storage";
     const account = await upsertConnectedAccount({
       instagramUserId: profile.user_id,
       username: profile.username,
@@ -85,6 +90,7 @@ export async function GET(request: NextRequest) {
     });
 
     // 5) subscribe the app to this account's webhook fields
+    stage = "webhook_subscription";
     let subscriptionOk = false;
     try {
       const sub = await subscribeAppToAccount({
@@ -113,7 +119,9 @@ export async function GET(request: NextRequest) {
     });
   } catch (err) {
     log.error("oauth callback failed", {
+      stage,
       error: err instanceof Error ? err.message : String(err),
+      ...(err instanceof IgApiError ? err.toLogFields() : {}),
     });
     return redirectToConnection(appUrl, { status: "error" });
   }
