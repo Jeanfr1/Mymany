@@ -28,7 +28,10 @@ import { enqueue } from "@/lib/repos/queue";
 import { matchKeywords, type MatchType } from "@/lib/matching/match";
 import { log } from "@/lib/log";
 import { getAccountToken } from "@/lib/repos/accounts";
-import { getMessagingUserProfile } from "@/lib/instagram/client";
+import {
+  getMediaPermalink,
+  getMessagingUserProfile,
+} from "@/lib/instagram/client";
 
 const LINK_DELAY_SECONDS = 3; // small gap so welcome lands before link
 const QUICK_REPLY_PREFIX = "auto:"; // payload marker linking a reply to its automation
@@ -163,8 +166,9 @@ async function handleComment(
 
   let enqueued = 0;
   for (const a of automations) {
-    // Specific-post filter.
-    if (a.specific_media_id && a.specific_media_id !== event.mediaId) continue;
+    // Specific-post filter. A shortcode marker lets an automation be safely
+    // armed before the Graph media ID is known; the permalink is verified live.
+    if (!(await matchesSpecificMedia(account, event.mediaId, a))) continue;
 
     const match = matchKeywords({
       text: event.text,
@@ -208,6 +212,40 @@ async function handleComment(
     if (contact) await setLastAutomation(contact.id, a.id);
   }
   return enqueued;
+}
+
+async function matchesSpecificMedia(
+  account: Account,
+  eventMediaId: string | undefined,
+  automation: Automation,
+): Promise<boolean> {
+  const target = automation.specific_media_id;
+  if (!target) return true;
+  if (!target.startsWith("shortcode:")) return target === eventMediaId;
+  if (!eventMediaId) return false;
+
+  const expectedShortcode = target.slice("shortcode:".length).trim();
+  if (!expectedShortcode) return false;
+  const token = await getAccountToken(account.id);
+  if (!token) return false;
+  try {
+    const permalink = await getMediaPermalink({
+      accessToken: token,
+      mediaId: eventMediaId,
+    });
+    if (!permalink) return false;
+    const path = new URL(permalink).pathname;
+    return path === `/reel/${expectedShortcode}/` ||
+      path === `/p/${expectedShortcode}/`;
+  } catch (err) {
+    log.warn("specific media permalink check failed closed", {
+      account_id: account.id,
+      automation_id: automation.id,
+      event_media_id: eventMediaId,
+      error: err instanceof Error ? err.message : String(err),
+    });
+    return false;
+  }
 }
 
 // ---------------------------------------------------------------------------

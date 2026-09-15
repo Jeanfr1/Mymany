@@ -148,6 +148,20 @@ export async function getMedia(params: {
   };
 }
 
+/** Resolve the canonical Instagram URL for a Graph media ID. */
+export async function getMediaPermalink(params: {
+  accessToken: string;
+  mediaId: string;
+}): Promise<string | null> {
+  const url = new URL(`${IG_GRAPH_BASE}/${params.mediaId}`);
+  url.searchParams.set("fields", "permalink");
+  url.searchParams.set("access_token", params.accessToken);
+  const raw = await parse<{ permalink?: string }>(
+    await fetch(url, { method: "GET" }),
+  );
+  return raw.permalink ?? null;
+}
+
 export type MessagingUserProfile = {
   id: string;
   username?: string;

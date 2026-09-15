@@ -1,5 +1,9 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { exchangeForLongLivedToken, getMessagingUserProfile } from "./client";
+import {
+  exchangeForLongLivedToken,
+  getMediaPermalink,
+  getMessagingUserProfile,
+} from "./client";
 
 describe("Instagram token exchange", () => {
   afterEach(() => {
@@ -79,6 +83,31 @@ describe("Instagram messaging user profile", () => {
       "is_user_follow_business",
     );
     expect(input.searchParams.get("access_token")).toBe("account-token");
+    expect(init.method).toBe("GET");
+  });
+});
+
+describe("Instagram media permalink", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it("resolves a canonical permalink from a Graph media ID", async () => {
+    const fetchMock = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({ permalink: "https://www.instagram.com/reel/ABC123/" }),
+        { status: 200, headers: { "content-type": "application/json" } },
+      ),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(
+      getMediaPermalink({ accessToken: "token", mediaId: "media-1" }),
+    ).resolves.toBe("https://www.instagram.com/reel/ABC123/");
+
+    const [input, init] = fetchMock.mock.calls[0] as [URL, RequestInit];
+    expect(input.pathname).toBe("/v25.0/media-1");
+    expect(input.searchParams.get("fields")).toBe("permalink");
     expect(init.method).toBe("GET");
   });
 });
