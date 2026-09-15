@@ -148,6 +148,34 @@ export async function getMedia(params: {
   };
 }
 
+export type MessagingUserProfile = {
+  id: string;
+  username?: string;
+  name?: string;
+  profile_pic?: string;
+  follower_count?: number;
+  is_user_follow_business?: boolean;
+  is_business_follow_user?: boolean;
+};
+
+/**
+ * Read a messaging contact by Instagram-scoped ID. Meta only exposes these
+ * relationship fields for people who have interacted with the professional
+ * account and when the messaging permission is present.
+ */
+export async function getMessagingUserProfile(params: {
+  accessToken: string;
+  instagramScopedId: string;
+}): Promise<MessagingUserProfile> {
+  const url = new URL(`${IG_GRAPH_BASE}/${params.instagramScopedId}`);
+  url.searchParams.set(
+    "fields",
+    "id,username,name,profile_pic,follower_count,is_user_follow_business,is_business_follow_user",
+  );
+  url.searchParams.set("access_token", params.accessToken);
+  return parse<MessagingUserProfile>(await fetch(url, { method: "GET" }));
+}
+
 // ---------------------------------------------------------------------------
 // Messaging (DMs, private replies) & comments
 // ---------------------------------------------------------------------------

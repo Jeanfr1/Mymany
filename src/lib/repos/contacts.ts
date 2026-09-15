@@ -103,6 +103,18 @@ export async function setLastAutomation(
     .eq("id", contactId);
 }
 
+export async function setFollowsBusiness(
+  contactId: string,
+  followsBusiness: boolean,
+): Promise<void> {
+  const db = createServiceClient();
+  const { error } = await db
+    .from("contacts")
+    .update({ follows_business: followsBusiness })
+    .eq("id", contactId);
+  if (error) throw error;
+}
+
 /** True if the contact's messaging window is currently open. */
 export function isWindowOpen(
   contact: Pick<Contact, "messaging_window_expires_at">,

@@ -101,11 +101,16 @@ export async function executeJob(job: QueueJob): Promise<JobOutcome> {
         pStr(p, "recipient_id") ?? window.value.instagram_scoped_id;
       const text = pStr(p, "text") ?? automation.value.welcome_message ?? "";
       if (!text) return { type: "skipped", reason: "empty_welcome" };
+      const qrTitle = pStr(p, "quick_reply_title");
+      const qrPayload = pStr(p, "quick_reply_payload");
+      const quickReplies =
+        qrTitle && qrPayload ? [{ title: qrTitle, payload: qrPayload }] : undefined;
       const res = await sendMessage({
         accessToken: token,
         igUserId: account.instagram_user_id,
         recipientId,
         text,
+        quickReplies,
       });
       return { type: "sent", providerMessageId: res.message_id };
     }
