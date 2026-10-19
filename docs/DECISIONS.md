@@ -232,3 +232,18 @@ We request **only** these three. No `instagram_business_content_publish` (we don
 - [ ] Whether Live Mode is required for the owner's tester accounts to receive events, or Dev Mode suffices.
 - [ ] Real payload shapes for story reply vs quick reply vs postback → freeze fixtures from sanitized live data.
 - [ ] Long-lived token refresh window behavior (refresh only valid after token is ≥24h old).
+
+---
+
+## 17. Follow-gate copy per automation ✅
+
+- An automation whose name starts with `[FOLLOW]` checks `is_user_follow_business` before sending the
+  link. Until now its message and button were hardcoded in Portuguese, which English-speaking accounts
+  would send to their audience.
+- **Decision:** three nullable columns on `automations` (`follow_gate_message`,
+  `follow_gate_retry_message`, `follow_gate_button`, migration `0008`). `NULL` keeps the original
+  Portuguese defaults, so existing automations behave exactly as before. `{handle}` in a message becomes
+  the account's `@username`. A retry with no retry text repeats the custom message (same language).
+- A custom message requires a custom button (validation), so one gate never mixes languages.
+- Copy rendering lives in `src/lib/engine/follow-gate.ts` (pure, unit-tested).
+- **Deploy order:** apply migration `0008` before deploying this code; the dashboard writes these columns.

@@ -47,6 +47,11 @@ export const automationInputSchema = z
     reminder_text: z.string().trim().max(1000).nullable().optional(),
     reminder_delay_seconds: z.number().int().min(0).max(86400).default(3600),
     cancel_reminder_after_click: z.boolean().default(true),
+
+    // Follow gate copy (used when the name starts with "[FOLLOW]"); empty = defaults.
+    follow_gate_message: z.string().trim().max(1000).nullable().optional(),
+    follow_gate_retry_message: z.string().trim().max(1000).nullable().optional(),
+    follow_gate_button: z.string().trim().max(20).nullable().optional(),
   })
   .refine(
     (v) => v.trigger_comment || v.trigger_story_reply || v.trigger_direct_message,
@@ -55,6 +60,16 @@ export const automationInputSchema = z
   .refine((v) => v.match_type === "any" || v.keywords.length > 0, {
     message: "Add at least one keyword (or use match type 'any')",
     path: ["keywords"],
-  });
+  })
+  // Custom gate text with the default (Portuguese) button would mix languages.
+  .refine(
+    (v) =>
+      !(v.follow_gate_message || v.follow_gate_retry_message) ||
+      Boolean(v.follow_gate_button),
+    {
+      message: "Set the follow-gate button text when you customize the gate message",
+      path: ["follow_gate_button"],
+    },
+  );
 
 export type AutomationInput = z.infer<typeof automationInputSchema>;

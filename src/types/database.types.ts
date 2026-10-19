@@ -18,6 +18,9 @@ export type Database = {
           cancel_reminder_after_click: boolean
           click_tracking_enabled: boolean
           created_at: string
+          follow_gate_button: string | null
+          follow_gate_message: string | null
+          follow_gate_retry_message: string | null
           id: string
           instagram_account_id: string
           keywords: string[]
@@ -45,6 +48,9 @@ export type Database = {
           cancel_reminder_after_click?: boolean
           click_tracking_enabled?: boolean
           created_at?: string
+          follow_gate_button?: string | null
+          follow_gate_message?: string | null
+          follow_gate_retry_message?: string | null
           id?: string
           instagram_account_id: string
           keywords?: string[]
@@ -72,6 +78,9 @@ export type Database = {
           cancel_reminder_after_click?: boolean
           click_tracking_enabled?: boolean
           created_at?: string
+          follow_gate_button?: string | null
+          follow_gate_message?: string | null
+          follow_gate_retry_message?: string | null
           id?: string
           instagram_account_id?: string
           keywords?: string[]

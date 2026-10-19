@@ -37,6 +37,9 @@ export async function saveAutomation(raw: unknown): Promise<SaveResult> {
     link_button_label: fields.link_button_label || null,
     link_url: fields.link_url || null,
     reminder_text: fields.reminder_text || null,
+    follow_gate_message: fields.follow_gate_message || null,
+    follow_gate_retry_message: fields.follow_gate_retry_message || null,
+    follow_gate_button: fields.follow_gate_button || null,
   };
 
   if (id) {

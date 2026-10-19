@@ -32,12 +32,11 @@ import {
   getMediaPermalink,
   getMessagingUserProfile,
 } from "@/lib/instagram/client";
+import { isFollowGated, renderFollowGate } from "@/lib/engine/follow-gate";
 
 const LINK_DELAY_SECONDS = 3; // small gap so welcome lands before link
 const QUICK_REPLY_PREFIX = "auto:"; // payload marker linking a reply to its automation
 const FOLLOW_REPLY_PREFIX = "follow:";
-const FOLLOW_GATE_NAME_PREFIX = "[FOLLOW]";
-const FOLLOW_REPLY_TEXT = "Já estou seguindo";
 
 export type ProcessSummary = {
   received: number;
@@ -327,7 +326,7 @@ async function continueAutomation(
   const a = automations.find((x) => x.id === automationId);
   if (!a) return 0;
   await setLastAutomation(contact.id, a.id);
-  if (a.name.startsWith(FOLLOW_GATE_NAME_PREFIX)) {
+  if (isFollowGated(a.name)) {
     const token = await getAccountToken(account.id);
     if (!token) return 0;
     let follows = false;
@@ -347,6 +346,11 @@ async function continueAutomation(
       });
     }
     if (!follows) {
+      const copy = renderFollowGate(
+        a,
+        account.instagram_username,
+        opts.isFollowRetry,
+      );
       const gate = await enqueue({
         jobType: "welcome_message",
         deduplicationKey: `follow_gate:${a.id}:${eventId}`,
@@ -356,8 +360,8 @@ async function continueAutomation(
         eventId,
         payload: {
           recipient_id: contact.instagram_scoped_id,
-          text: followGateMessage(account.instagram_username, opts.isFollowRetry),
-          quick_reply_title: FOLLOW_REPLY_TEXT,
+          text: copy.text,
+          quick_reply_title: copy.button,
           quick_reply_payload: `${FOLLOW_REPLY_PREFIX}${a.id}`,
         } as Json,
       });
@@ -365,16 +369,6 @@ async function continueAutomation(
     }
   }
   return enqueueDeliverySequence(account, contact, a, eventId, opts);
-}
-
-function followGateMessage(
-  username: string | null,
-  isRetry: boolean = false,
-): string {
-  const handle = username ? `@${username}` : "este perfil";
-  return isRetry
-    ? `Ainda não consegui confirmar que você segue ${handle}. Siga o perfil e toque novamente para liberar o PDF.`
-    : `Para liberar o seu plano, siga ${handle} e depois toque no botão abaixo. Vou verificar automaticamente.`;
 }
 
 /**

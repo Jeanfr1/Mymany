@@ -4,6 +4,11 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { saveAutomation } from "./actions";
 import type { Tables } from "@/types/database.types";
+import {
+  FOLLOW_GATE_DEFAULTS,
+  FOLLOW_GATE_NAME_PREFIX,
+  isFollowGated,
+} from "@/lib/engine/follow-gate";
 
 type AccountOption = { id: string; label: string };
 
@@ -58,6 +63,9 @@ export function AutomationForm({
     reminder_text: initial?.reminder_text ?? "",
     reminder_delay_seconds: initial?.reminder_delay_seconds ?? 3600,
     cancel_reminder_after_click: initial?.cancel_reminder_after_click ?? true,
+    follow_gate_message: initial?.follow_gate_message ?? "",
+    follow_gate_retry_message: initial?.follow_gate_retry_message ?? "",
+    follow_gate_button: initial?.follow_gate_button ?? "",
   });
 
   function set<K extends keyof typeof f>(key: K, value: (typeof f)[K]) {
@@ -91,6 +99,9 @@ export function AutomationForm({
       reminder_text: f.reminder_text || null,
       reminder_delay_seconds: Number(f.reminder_delay_seconds) || 0,
       cancel_reminder_after_click: f.cancel_reminder_after_click,
+      follow_gate_message: f.follow_gate_message || null,
+      follow_gate_retry_message: f.follow_gate_retry_message || null,
+      follow_gate_button: f.follow_gate_button || null,
     };
 
     startTransition(async () => {
@@ -319,6 +330,50 @@ export function AutomationForm({
             )}
           </div>
         )}
+      </section>
+
+      {/* Follow gate */}
+      <section className="rounded-xl border border-border bg-card p-5 space-y-4">
+        <h2 className="font-semibold">Follow gate</h2>
+        <p className={help}>
+          {isFollowGated(f.name)
+            ? "On: the link is only sent to people who follow the account."
+            : `Off: start the name with ${FOLLOW_GATE_NAME_PREFIX} to only send the link to followers.`}{" "}
+          Leave these empty to use the default Portuguese text. Use {"{handle}"} for
+          the account’s @username.
+        </p>
+        <div>
+          <label className={labelCls}>Gate message</label>
+          <textarea
+            className={field}
+            rows={2}
+            value={f.follow_gate_message}
+            onChange={(e) => set("follow_gate_message", e.target.value)}
+            placeholder={FOLLOW_GATE_DEFAULTS.message}
+          />
+        </div>
+        <div>
+          <label className={labelCls}>Retry message (they tapped but don’t follow yet)</label>
+          <textarea
+            className={field}
+            rows={2}
+            value={f.follow_gate_retry_message}
+            onChange={(e) => set("follow_gate_retry_message", e.target.value)}
+            placeholder={FOLLOW_GATE_DEFAULTS.retryMessage}
+          />
+          <p className={help}>Empty = repeats the gate message (or the default).</p>
+        </div>
+        <div>
+          <label className={labelCls}>Button text (max 20)</label>
+          <input
+            className={field}
+            maxLength={20}
+            value={f.follow_gate_button}
+            onChange={(e) => set("follow_gate_button", e.target.value)}
+            placeholder={FOLLOW_GATE_DEFAULTS.button}
+          />
+          <p className={help}>Required when you write a custom gate message.</p>
+        </div>
       </section>
 
       {error && (
