@@ -33,10 +33,12 @@ import {
   getMessagingUserProfile,
 } from "@/lib/instagram/client";
 import { isFollowGated, renderFollowGate } from "@/lib/engine/follow-gate";
-
-const LINK_DELAY_SECONDS = 3; // small gap so welcome lands before link
-const QUICK_REPLY_PREFIX = "auto:"; // payload marker linking a reply to its automation
-const FOLLOW_REPLY_PREFIX = "follow:";
+import {
+  FOLLOW_REPLY_PREFIX,
+  QUICK_REPLY_PREFIX,
+  dmWelcomeWithButton,
+  linkDelaySeconds,
+} from "@/lib/engine/delivery-plan";
 
 export type ProcessSummary = {
   received: number;
@@ -305,9 +307,26 @@ async function handleInboundMessage(
       removeAccents: a.remove_accents,
     });
     if (!match.matched) continue;
-    enqueued += await enqueueDeliverySequence(account, contact, a, eventId, {
-      includeWelcome: true,
-    });
+    // Same first step as a comment: the welcome with its button. The tap
+    // comes back as a quick reply and continueAutomation runs the follow gate
+    // and sends the link.
+    const welcome = dmWelcomeWithButton(a, contact.instagram_scoped_id);
+    if (welcome) {
+      const w = await enqueue({
+        jobType: "welcome_message",
+        deduplicationKey: `welcome:${a.id}:${eventId}`,
+        instagramAccountId: account.id,
+        automationId: a.id,
+        contactId: contact.id,
+        eventId,
+        payload: welcome as Json,
+      });
+      if (w.isNew) enqueued++;
+    } else {
+      enqueued += await enqueueDeliverySequence(account, contact, a, eventId, {
+        includeWelcome: true,
+      });
+    }
     await setLastAutomation(contact.id, a.id);
   }
   return enqueued;
@@ -385,11 +404,12 @@ async function enqueueDeliverySequence(
 ): Promise<number> {
   let enqueued = 0;
   const now = Date.now();
+  const welcomeQueued = Boolean(opts.includeWelcome && a.welcome_message);
 
   // Dedup by EVENT (not contact): each genuine new inbound interaction re-triggers
   // the automation (re-engagement works), while replayed webhooks are already
   // filtered upstream by the events-table dedup hash — so this can't double-send.
-  if (opts.includeWelcome && a.welcome_message) {
+  if (welcomeQueued && a.welcome_message) {
     const w = await enqueue({
       jobType: "welcome_message",
       deduplicationKey: `welcome:${a.id}:${eventId}`,
@@ -413,7 +433,7 @@ async function enqueueDeliverySequence(
       automationId: a.id,
       contactId: contact.id,
       eventId,
-      scheduledAt: new Date(now + LINK_DELAY_SECONDS * 1000),
+      scheduledAt: new Date(now + linkDelaySeconds(welcomeQueued) * 1000),
       payload: { recipient_id: contact.instagram_scoped_id } as Json,
     });
     if (link.isNew) enqueued++;
